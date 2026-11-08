@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Saryarka Lounge | QR-Меню</title>
+    
+    <!-- Подключение Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Настройка темы Tailwind -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#121212',
+                        darker: '#0a0a0a',
+                        card: '#1e1e1e',
+                        gold: {
+                            400: '#f59e0b',
+                            500: '#d97706',
+                            600: '#b45309'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Montserrat', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Подключение шрифтов -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    
+    <!-- Иконки Phosphor -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: #0a0a0a;
+            color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Плавные переходы для модального окна */
+        #cart-modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        #cart-content {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .modal-open #cart-modal {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-open #cart-content {
+            transform: translateY(0);
+        }
+
+        /* Скроллбар для корзины */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 4px;
+        }
+
+        /* Скрытие скроллбара для навигации */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen pb-24">
+
+    <!-- Header / Логотип и Навигация -->
+    <header class="sticky top-0 z-30 bg-dark/95 backdrop-blur-md border-b border-white/10 pt-5 pb-2 shadow-md shadow-black/50">
+        <div class="px-4 text-center">
+            <h1 class="font-serif text-2xl md:text-3xl font-bold text-white tracking-wide">
+                Saryarka <span class="text-gold-500 italic">Lounge</span>
+            </h1>
+            <p class="text-xs md:text-sm text-gray-400 mt-1 uppercase tracking-widest font-medium">г. Караганда</p>
+        </div>
+        
+        <!-- Навигация по категориям -->
+        <div class="mt-4 px-4 w-full max-w-5xl mx-auto">
+            <div id="category-nav" class="flex overflow-x-auto gap-2 pb-2 no-scrollbar snap-x">
+                <!-- Категории будут добавлены через JS -->
+            </div>
+        </div>
+    </header>
+
+    <!-- Основной контент (Меню) -->
+    <main class="container mx-auto px-4 py-6 max-w-5xl">
+        <div id="menu-container" class="space-y-12 md:space-y-16">
+            <!-- Категории и элементы меню будут добавлены через JS -->
+        </div>
+    </main>
+
+    <!-- Плавающая кнопка корзины -->
+    <button id="cart-fab" onclick="toggleCart()" class="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-40 bg-gold-500 hover:bg-gold-600 text-white p-4 rounded-full shadow-[0_4px_20px_rgba(217,119,6,0.4)] flex items-center justify-center transition-transform hover:scale-105 active:scale-95 group">
+        <i class="ph ph-shopping-cart text-2xl"></i>
+        <!-- Счетчик -->
+        <span id="cart-badge" class="absolute -top-1 -right-1 bg-red-600 text-white text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-dark hidden">0</span>
+    </button>
+
+    <!-- Модальное окно корзины -->
+    <div id="cart-modal" class="fixed inset-0 z-50 opacity-0 pointer-events-none flex justify-end">
+        <!-- Затемнение фона -->
+        <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="toggleCart()"></div>
+        
+        <!-- Панель корзины -->
+        <div id="cart-content" class="relative w-full max-w-md bg-card h-full transform translate-x-full md:translate-x-full shadow-2xl flex flex-col border-l border-white/5">
+            <!-- Шапка корзины -->
+            <div class="p-5 border-b border-white/10 flex justify-between items-center bg-darker">
+                <h3 class="font-serif text-xl font-bold text-white flex items-center gap-2">
+                    <i class="ph ph-receipt text-gold-500"></i> Ваш заказ
+                </h3>
+                <button onclick="toggleCart()" class="text-gray-400 hover:text-white transition-colors">
+                    <i class="ph ph-x text-2xl"></i>
+                </button>
+            </div>
+            
+            <!-- Список товаров в корзине -->
+            <div id="cart-items" class="flex-1 overflow-y-auto p-5 space-y-4 custom-scrollbar">
+                <!-- Товары добавляются через JS -->
+            </div>
+            
+            <!-- Подвал корзины (Итог и табличка) -->
+            <div class="p-5 border-t border-white/10 bg-darker relative z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
+                <div class="flex justify-between items-center mb-5">
+                    <span class="text-gray-400 font-medium">Итого:</span>
+                    <span id="cart-total" class="font-serif text-3xl font-bold text-gold-500">0 ₸</span>
+                </div>
+                
+                <div class="bg-gradient-to-br from-card to-dark border border-gold-500/30 rounded-xl p-4 flex gap-4 items-center shadow-[0_0_15px_rgba(217,119,6,0.1)] relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-gold-500/10 rounded-full blur-xl -mr-8 -mt-8"></div>
+                    <div class="bg-gold-500/20 p-3 rounded-full text-gold-500 shrink-0">
+                        <i class="ph ph-bell-ringing text-2xl"></i>
+                    </div>
+                    <p class="text-[13px] md:text-sm text-gray-300 leading-snug">
+                        Для заказа <strong class="text-white font-medium">нажмите кнопку на столе</strong> и покажите этот экран официанту.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Данные меню
+        const menuItems = [
+            {
+                id: 1,
+                category: 'Стейки',
+                name: 'Стейк Рибай "Кочевник"',
+                description: 'Премиальная говядина зернового откорма, спаржа гриль, соус перечный, розмарин.',
+                price: 14500,
+                image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 2,
+                category: 'Стейки',
+                name: 'Филе Миньон с фуа-гра',
+                description: 'Нежнейшая вырезка с обжаренной фуа-гра, подается с трюфельным пюре и ягодным кюли.',
+                price: 16800,
+                image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 13,
+                category: 'Стейки',
+                name: 'Стейк Тибон',
+                description: 'Классический стейк на Т-образной кости. Подается с запеченным картофелем и чесночным маслом.',
+                price: 15500,
+                image: 'https://images.unsplash.com/photo-1594046243098-0fceea9d451e?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 14,
+                category: 'Стейки',
+                name: 'Стейк Стриплойн',
+                description: 'Сочный стейк с ярко выраженным мясным вкусом, соусом чимичурри и томатами черри.',
+                price: 12900,
+                image: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 3,
+                category: 'Шашлыки',
+                name: 'Шашлык из баранины',
+                description: 'Сочная мякоть молодого барашка на углях, маринованный лук, фирменный томатный соус.',
+                price: 4200,
+                image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 4,
+                category: 'Шашлыки',
+                name: 'Люля-кебаб из телятины',
+                description: 'Рубленая телятина с восточными специями, приготовленная на мангале. Подается с лавашом.',
+                price: 3800,
+                image: 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 15,
+                category: 'Шашлыки',
+                name: 'Шашлык из куриного филе',
+                description: 'Нежное куриное филе в кефирно-пряном маринаде. Подается с соусом тар-тар.',
+                price: 2900,
+                image: 'https://images.unsplash.com/photo-1564834724105-918b73d1b9e0?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 16,
+                category: 'Шашлыки',
+                name: 'Овощи на мангале',
+                description: 'Шампиньоны, цуккини, баклажаны и болгарский перец, запеченные с дымком.',
+                price: 2200,
+                image: 'https://images.unsplash.com/photo-1590165482129-1b8b27698780?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 5,
+                category: 'Салаты',
+                name: 'Салат "Цезарь" с креветками',
+                description: 'Тигровые креветки на гриле, хрустящие римские листья, пармезан, чесночные гренки, фирменный соус.',
+                price: 5200,
+                image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 6,
+                category: 'Салаты',
+                name: 'Теплый салат с ростбифом',
+                description: 'Микс салата, слайсы нежного ростбифа, вяленые томаты, кедровые орешки, медово-горчичная заправка.',
+                price: 4900,
+                image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 17,
+                category: 'Салаты',
+                name: 'Греческий салат',
+                description: 'Свежие овощи, сыр фета, маслины Каламата, красный лук и оливковое масло первого отжима.',
+                price: 3100,
+                image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 18,
+                category: 'Салаты',
+                name: 'Руккола со страчателлой',
+                description: 'Свежая руккола, нежный итальянский сыр страчателла, томаты черри и бальзамический крем.',
+                price: 4500,
+                image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 7,
+                category: 'Горячие закуски',
+                name: 'Сет брускетт "Сарыарка"',
+                description: 'Хрустящая чиабатта с тремя вкусами: лосось слабой соли, нежный ростбиф, страчателла с вялеными томатами.',
+                price: 3500,
+                image: 'https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 19,
+                category: 'Горячие закуски',
+                name: 'Тигровые креветки темпура',
+                description: 'Хрустящие креветки в воздушном кляре темпура с кисло-сладким соусом чили.',
+                price: 4800,
+                image: 'https://images.unsplash.com/photo-1625943555419-56a2cb596640?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 20,
+                category: 'Горячие закуски',
+                name: 'Мидии в сливочном соусе',
+                description: 'Мидии в раковинах, тушеные в белом вине, сливках и чесноке. Подаются с хрустящим багетом.',
+                price: 5500,
+                image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 8,
+                category: 'Десерты',
+                name: 'Шоколадный фондан',
+                description: 'Горячий десерт из бельгийского темного шоколада с жидким центром. Подается с шариком ванильного мороженого и ягодами.',
+                price: 3200,
+                image: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 9,
+                category: 'Десерты',
+                name: 'Чизкейк "Сан-Себастьян"',
+                description: 'Нежный обожженный чизкейк с карамельной корочкой и текучим центром.',
+                price: 3500,
+                image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 21,
+                category: 'Десерты',
+                name: 'Классический Тирамису',
+                description: 'Итальянский десерт на основе сыра маскарпоне, печенья савоярди и эспрессо.',
+                price: 2800,
+                image: 'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 10,
+                category: 'Напитки',
+                name: 'Коктейль "Огни Караганды"',
+                description: 'Освежающий авторский микс: джин, пюре маракуйи, сироп лемонграсса, сок лимона и игристое вино.',
+                price: 2800,
+                image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 11,
+                category: 'Напитки',
+                name: 'Авторский чай "Ягодный бунт"',
+                description: 'Чай на основе свежих лесных ягод, с добавлением мяты, меда и специй. Чайник 800мл.',
+                price: 2500,
+                image: 'https://images.unsplash.com/photo-1576092762791-dd9e2220abd4?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 12,
+                category: 'Напитки',
+                name: 'Лимонад Манго-Маракуйя',
+                description: 'Освежающий тропический лимонад со свежим пюре манго, маракуйей и содовой. 400мл.',
+                price: 1800,
+                image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 22,
+                category: 'Напитки',
+                name: 'Капучино',
+                description: 'Классический кофейный напиток на основе эспрессо с густой молочной пенкой.',
+                price: 1200,
+                image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80'
+            }
+        ];
+
+        let cart = {};
+
+        const formatPrice = (price) => {
+            return new Intl.NumberFormat('ru-RU').format(price) + ' ₸';
+        };
+
+        window.onload = () => {
+            renderMenu();
+            updateCartUI(); // Инициализируем пустое состояние корзины при загрузке
+            
+            if (window.innerWidth < 768) {
+                const cartContent = document.getElementById('cart-content');
+                cartContent.classList.remove('translate-x-full');
+                cartContent.classList.add('translate-y-full');
+                cartContent.style.height = '85vh';
+                cartContent.style.marginTop = 'auto';
+                cartContent.style.borderLeft = 'none';
+                cartContent.style.borderTopLeftRadius = '20px';
+                cartContent.style.borderTopRightRadius = '20px';
+                
+                document.getElementById('cart-modal').classList.add('items-end');
+                const style = document.createElement('style');
+                style.innerHTML = `
+                    .modal-open #cart-content { transform: translateY(0) !important; }
+                `;
+                document.head.appendChild(style);
+            }
+        };
+
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            const navContainer = document.getElementById('category-nav');
+            container.innerHTML = '';
+            navContainer.innerHTML = '';
+            
+            const categories = [...new Set(menuItems.map(item => item.category))];
+            
+            categories.forEach(category => {
+                const categoryId = `category-${category.replace(/\s+/g, '-')}`;
+                
+                const navBtn = document.createElement('a');
+                navBtn.href = `#${categoryId}`;
+                navBtn.className = "snap-start whitespace-nowrap px-4 py-2 rounded-full bg-card border border-white/5 text-gray-300 text-sm font-medium hover:bg-gold-500 hover:text-white hover:border-gold-500 transition-all active:scale-95";
+                navBtn.innerText = category;
+                navContainer.appendChild(navBtn);
+
+                const categoryItems = menuItems.filter(item => item.category === category);
+                
+                const section = document.createElement('div');
+                section.id = categoryId;
+                section.className = "scroll-mt-40"; 
+                
+                let html = `
+                    <div class="mb-6 flex items-center gap-4">
+                        <h2 class="font-serif text-2xl md:text-3xl font-bold text-white tracking-wide">${category}</h2>
+                        <div class="flex-1 h-[1px] bg-gradient-to-r from-gold-500/50 to-transparent"></div>
+                    </div>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                `;
+                
+                categoryItems.forEach(item => {
+                    html += `
+                        <div class="bg-card rounded-2xl overflow-hidden shadow-lg border border-white/5 flex flex-col group transition-transform hover:-translate-y-1">
+                            <div class="relative h-36 md:h-56 overflow-hidden bg-darker">
+                                <img src="${item.image}" alt="${item.name}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e1e1e/d97706?text=Saryarka+Lounge';" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy">
+                                <div class="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent opacity-90"></div>
+                                <div class="absolute bottom-2 left-2 right-2 md:bottom-4 md:left-4 md:right-4 flex justify-between items-end">
+                                    <span class="bg-dark/80 backdrop-blur text-gold-400 font-bold text-xs md:text-base px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-gold-500/30">${formatPrice(item.price)}</span>
+                                </div>
+                            </div>
+                            <div class="p-3 md:p-5 flex-1 flex flex-col">
+                                <h3 class="font-serif text-sm md:text-lg font-bold text-white leading-tight mb-1 md:mb-2">${item.name}</h3>
+                                <p class="text-gray-400 text-[11px] md:text-sm mb-3 md:mb-5 flex-1 leading-relaxed line-clamp-3 md:line-clamp-none">${item.description}</p>
+                                
+                                <button onclick="addToCart(${item.id})" class="w-full bg-white/5 hover:bg-gold-500 hover:text-white text-gray-300 border border-white/10 hover:border-gold-500 py-2 md:py-3 rounded-xl text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 active:scale-95 group-hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]">
+                                    <i class="ph ph-plus-circle text-lg md:text-xl"></i>
+                                    <span>В заказ</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                section.innerHTML = html;
+                container.appendChild(section);
+            });
+        }
+
+        function addToCart(id) {
+            if (cart[id]) {
+                cart[id].quantity += 1;
+            } else {
+                const item = menuItems.find(i => i.id === id);
+                cart[id] = { ...item, quantity: 1 };
+            }
+            updateCartUI();
+            
+            const fab = document.getElementById('cart-fab');
+            fab.classList.add('scale-110');
+            setTimeout(() => fab.classList.remove('scale-110'), 200);
+        }
+
+        function changeQuantity(id, delta) {
+            if (cart[id]) {
+                cart[id].quantity += delta;
+                if (cart[id].quantity <= 0) {
+                    delete cart[id];
+                }
+                updateCartUI();
+            }
+        }
+
+        function updateCartUI() {
+            const cartItemsContainer = document.getElementById('cart-items');
+            const cartTotal = document.getElementById('cart-total');
+            const badge = document.getElementById('cart-badge');
+            
+            cartItemsContainer.innerHTML = '';
+            let totalSum = 0;
+            let totalItems = 0;
+            
+            const cartValues = Object.values(cart);
+            
+            if (cartValues.length === 0) {
+                cartItemsContainer.innerHTML = `
+                    <div class="text-center flex flex-col items-center justify-center h-full text-gray-500 mt-10">
+                        <div class="bg-white/5 p-6 rounded-full mb-4">
+                            <i class="ph ph-basket text-5xl opacity-50"></i>
+                        </div>
+                        <p class="text-lg font-medium text-gray-400">Ваш заказ пока пуст</p>
+                        <p class="text-sm mt-2 text-gray-500 max-w-[200px] mx-auto">Добавьте изысканные блюда из нашего меню</p>
+                    </div>
+                `;
+                badge.classList.add('hidden');
+            } else {
+                badge.classList.remove('hidden');
+                
+                cartValues.forEach(item => {
+                    totalSum += item.price * item.quantity;
+                    totalItems += item.quantity;
+                    
+                    const itemEl = document.createElement('div');
+                    itemEl.className = 'flex items-center gap-3 bg-gradient-to-r from-card to-dark/50 p-3 rounded-xl border border-white/5 shadow-sm relative overflow-hidden group';
+                    
+                    itemEl.innerHTML = `
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-gold-500/50"></div>
+                        <img src="${item.image}" alt="${item.name}" onerror="this.onerror=null; this.src='https://placehold.co/100x100/1e1e1e/d97706?text=Фото';" class="w-16 h-16 rounded-lg object-cover shadow-md ml-1">
+                        <div class="flex-1 min-w-0 pr-2">
+                            <h4 class="text-sm font-semibold text-white truncate mb-1">${item.name}</h4>
+                            <p class="text-gold-400 text-sm font-medium">${formatPrice(item.price * item.quantity)}</p>
+                        </div>
+                        <div class="flex items-center gap-2 bg-darker rounded-lg p-1 border border-white/10 shadow-inner">
+                            <button onclick="changeQuantity(${item.id}, -1)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95">
+                                <i class="ph ph-minus"></i>
+                            </button>
+                            <span class="w-5 text-center text-sm font-bold text-white">${item.quantity}</span>
+                            <button onclick="changeQuantity(${item.id}, 1)" class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 rounded-md transition-colors active:scale-95">
+                                <i class="ph ph-plus text-gold-500"></i>
+                            </button>
+                        </div>
+                    `;
+                    cartItemsContainer.appendChild(itemEl);
+                });
+            }
+            
+            badge.innerText = totalItems;
+            cartTotal.innerText = formatPrice(totalSum);
+        }
+
+        function toggleCart() {
+            const body = document.body;
+            body.classList.toggle('modal-open');
+            
+            if (body.classList.contains('modal-open')) {
+                body.style.overflow = 'hidden'; 
+            } else {
+                body.style.overflow = '';
+            }
+        }
+    </script>
+</body>
+</html>
