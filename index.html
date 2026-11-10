@@ -95,11 +95,17 @@
 
     <!-- Header / Логотип и Навигация -->
     <header class="sticky top-0 z-30 bg-dark/95 backdrop-blur-md border-b border-white/10 pt-5 pb-2 shadow-md shadow-black/50">
+        <!-- Переключатель языков -->
+        <div class="absolute right-4 top-5 md:right-8 flex bg-darker border border-white/10 rounded-lg overflow-hidden z-50 shadow-lg">
+            <button onclick="changeLang('ru')" id="lang-ru" class="px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold bg-gold-500 text-white transition-colors">RU</button>
+            <button onclick="changeLang('kk')" id="lang-kk" class="px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors">KK</button>
+        </div>
+
         <div class="px-4 text-center">
             <h1 class="font-serif text-2xl md:text-3xl font-bold text-white tracking-wide">
                 Saryarka <span class="text-gold-500 italic">Lounge</span>
             </h1>
-            <p class="text-xs md:text-sm text-gray-400 mt-1 uppercase tracking-widest font-medium">г. Караганда</p>
+            <p id="city-label" class="text-xs md:text-sm text-gray-400 mt-1 uppercase tracking-widest font-medium">г. Караганда</p>
         </div>
         
         <!-- Навигация по категориям -->
@@ -134,7 +140,7 @@
             <!-- Шапка корзины -->
             <div class="p-5 border-b border-white/10 flex justify-between items-center bg-darker">
                 <h3 class="font-serif text-xl font-bold text-white flex items-center gap-2">
-                    <i class="ph ph-receipt text-gold-500"></i> Ваш заказ
+                    <i class="ph ph-receipt text-gold-500"></i> <span id="cart-title">Ваш заказ</span>
                 </h3>
                 <button onclick="toggleCart()" class="text-gray-400 hover:text-white transition-colors">
                     <i class="ph ph-x text-2xl"></i>
@@ -147,10 +153,21 @@
             </div>
             
             <!-- Подвал корзины (Итог и табличка) -->
-            <div class="p-5 border-t border-white/10 bg-darker relative z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.3)]">
-                <div class="flex justify-between items-center mb-5">
-                    <span class="text-gray-400 font-medium">Итого:</span>
-                    <span id="cart-total" class="font-serif text-3xl font-bold text-gold-500">0 ₸</span>
+            <div class="p-5 border-t border-white/10 bg-darker relative z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.3)] space-y-3">
+                <div class="space-y-1.5 text-sm">
+                    <div class="flex justify-between items-center text-gray-400">
+                        <span id="cart-subtotal-label">Подытог:</span>
+                        <span id="cart-subtotal" class="font-medium text-gray-200">0 ₸</span>
+                    </div>
+                    <div class="flex justify-between items-center text-gray-400">
+                        <span id="cart-service-label">Обслуживание (10%):</span>
+                        <span id="cart-service" class="font-medium text-gold-400">0 ₸</span>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center pt-2 border-t border-white/10">
+                    <span id="cart-total-label" class="text-white font-semibold">Итого к оплате:</span>
+                    <span id="cart-total" class="font-serif text-2xl md:text-3xl font-bold text-gold-500">0 ₸</span>
                 </div>
                 
                 <div class="bg-gradient-to-br from-card to-dark border border-gold-500/30 rounded-xl p-4 flex gap-4 items-center shadow-[0_0_15px_rgba(217,119,6,0.1)] relative overflow-hidden">
@@ -158,7 +175,7 @@
                     <div class="bg-gold-500/20 p-3 rounded-full text-gold-500 shrink-0">
                         <i class="ph ph-bell-ringing text-2xl"></i>
                     </div>
-                    <p class="text-[13px] md:text-sm text-gray-300 leading-snug">
+                    <p id="order-notice" class="text-[13px] md:text-sm text-gray-300 leading-snug">
                         Для заказа <strong class="text-white font-medium">нажмите кнопку на столе</strong> и покажите этот экран официанту.
                     </p>
                 </div>
@@ -167,183 +184,325 @@
     </div>
 
     <script>
-        // Данные меню
+        let currentLang = 'ru';
+
+        const i18n = {
+            ru: {
+                city: 'г. Караганда',
+                cartTitle: 'Ваш заказ',
+                subtotal: 'Подытог:',
+                serviceFee: 'Обслуживание (10%):',
+                total: 'Итого к оплате:',
+                emptyCart: 'Ваш заказ пока пуст',
+                emptyDesc: 'Добавьте изысканные блюда из нашего меню',
+                orderNotice: 'Для заказа <strong class="text-white font-medium">нажмите кнопку на столе</strong> и покажите этот экран официанту.',
+                addToCart: 'В заказ',
+                photoFallback: 'Фото'
+            },
+            kk: {
+                city: 'Қарағанды қ.',
+                cartTitle: 'Сіздің тапсырысыңыз',
+                subtotal: 'Аралық сома:',
+                serviceFee: 'Қызмет көрсету (10%):',
+                total: 'Төлейтін барлығы:',
+                emptyCart: 'Тапсырысыңыз әзірге бос',
+                emptyDesc: 'Мәзірден дәмді тағамдарды қосыңыз',
+                orderNotice: 'Тапсырыс беру үшін <strong class="text-white font-medium">үстелдегі батырманы басып</strong>, осы экранды даяшыға көрсетіңіз.',
+                addToCart: 'Себетке',
+                photoFallback: 'Сурет'
+            }
+        };
+
+        // Расширенное меню с 100% точным соответствием фотографий блюдам
         const menuItems = [
+            // СТЕЙКИ И ГРИЛЬ
             {
                 id: 1,
-                category: 'Стейки',
-                name: 'Стейк Рибай "Кочевник"',
-                description: 'Премиальная говядина зернового откорма, спаржа гриль, соус перечный, розмарин.',
-                price: 14500,
-                image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80'
+                category: { ru: 'Стейки и Гриль', kk: 'Стейктер мен Гриль' },
+                name: { ru: 'Стейк Рибай Прайм', kk: 'Рибай Прайм стейкі' },
+                description: { ru: 'Мраморная говядина зернового откорма, обжаренная на гриле. Подается с перечным соусом.', kk: 'Грильде қуырылған, астықпен қоректенген мәрмәр сиыр еті. Бұрыш тұздығымен беріледі.' },
+                price: 15500,
+                image: 'https://images.unsplash.com/photo-1546964124-0cce460f38ef?auto=format&fit=crop&w=600&q=80'
             },
             {
                 id: 2,
-                category: 'Стейки',
-                name: 'Филе Миньон с фуа-гра',
-                description: 'Нежнейшая вырезка с обжаренной фуа-гра, подается с трюфельным пюре и ягодным кюли.',
+                category: { ru: 'Стейки и Гриль', kk: 'Стейктер мен Гриль' },
+                name: { ru: 'Филе Миньон', kk: 'Филе Миньон' },
+                description: { ru: 'Самый нежный стейк из центральной части вырезки с трюфельным пюре.', kk: 'Трюфель езбесімен берілетін ең нәзік жон еті стейкі.' },
                 price: 16800,
                 image: 'https://images.unsplash.com/photo-1600891964092-4316c288032e?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 13,
-                category: 'Стейки',
-                name: 'Стейк Тибон',
-                description: 'Классический стейк на Т-образной кости. Подается с запеченным картофелем и чесночным маслом.',
-                price: 15500,
-                image: 'https://images.unsplash.com/photo-1594046243098-0fceea9d451e?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 14,
-                category: 'Стейки',
-                name: 'Стейк Стриплойн',
-                description: 'Сочный стейк с ярко выраженным мясным вкусом, соусом чимичурри и томатами черри.',
-                price: 12900,
+                id: 3,
+                category: { ru: 'Стейки и Гриль', kk: 'Стейктер мен Гриль' },
+                name: { ru: 'Стейк Томагавк', kk: 'Томагавк стейкі' },
+                description: { ru: 'Внушительный стейк на кости с сочным мясом глубокой мраморности.', kk: 'Сүйегі бар, сонымен қатар шырынды мәрмәр еті бар үлкен стейк.' },
+                price: 19500,
                 image: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 3,
-                category: 'Шашлыки',
-                name: 'Шашлык из баранины',
-                description: 'Сочная мякоть молодого барашка на углях, маринованный лук, фирменный томатный соус.',
-                price: 4200,
-                image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=600&q=80'
-            },
-            {
                 id: 4,
-                category: 'Шашлыки',
-                name: 'Люля-кебаб из телятины',
-                description: 'Рубленая телятина с восточными специями, приготовленная на мангале. Подается с лавашом.',
-                price: 3800,
-                image: 'https://images.unsplash.com/photo-1603360946369-dc9bb6258143?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 15,
-                category: 'Шашлыки',
-                name: 'Шашлык из куриного филе',
-                description: 'Нежное куриное филе в кефирно-пряном маринаде. Подается с соусом тар-тар.',
-                price: 2900,
-                image: 'https://images.unsplash.com/photo-1564834724105-918b73d1b9e0?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 16,
-                category: 'Шашлыки',
-                name: 'Овощи на мангале',
-                description: 'Шампиньоны, цуккини, баклажаны и болгарский перец, запеченные с дымком.',
-                price: 2200,
-                image: 'https://images.unsplash.com/photo-1590165482129-1b8b27698780?auto=format&fit=crop&w=600&q=80'
+                category: { ru: 'Стейки и Гриль', kk: 'Стейктер мен Гриль' },
+                name: { ru: 'Стейк из лосося', kk: 'Албырт стейкі' },
+                description: { ru: 'Нежный стейк норвежского лосося на гриле с долькой лимона.', kk: 'Лимон тілімімен берілетін грильдегі нәзік норвегиялық албырт стейкі.' },
+                price: 8500,
+                image: 'https://images.unsplash.com/photo-1485921325833-c519f76c4927?auto=format&fit=crop&w=600&q=80'
             },
             {
                 id: 5,
-                category: 'Салаты',
-                name: 'Салат "Цезарь" с креветками',
-                description: 'Тигровые креветки на гриле, хрустящие римские листья, пармезан, чесночные гренки, фирменный соус.',
-                price: 5200,
+                category: { ru: 'Стейки и Гриль', kk: 'Стейктер мен Гриль' },
+                name: { ru: 'Ребрышки BBQ', kk: 'BBQ қабырғашалары' },
+                description: { ru: 'Сочные свиные ребрышки в фирменном карамелизованном соусе барбекю.', kk: 'Фирмалық карамельденген барбекю тұздығындағы шырынды қабырғашалар.' },
+                price: 7900,
+                image: 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // БУРГЕРЫ И СЭНДВИЧИ
+            {
+                id: 6,
+                category: { ru: 'Бургеры и Сэндвичи', kk: 'Бургерлер мен Сэндвичтер' },
+                name: { ru: 'Классический Чизбургер', kk: 'Классикалық Чизбургер' },
+                description: { ru: 'Сочная котлета из мраморной говядины, сыр чеддер, свежие овощи и фирменный соус.', kk: 'Мәрмәр сиыр етінен шырынды котлет, чеддер ірімшігі, жаңа көкөністер және фирмалық тұздық.' },
+                price: 4200,
+                image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 7,
+                category: { ru: 'Бургеры и Сэндвичи', kk: 'Бургерлер мен Сэндвичтер' },
+                name: { ru: 'Двойной бургер BBQ', kk: 'Қос BBQ бургері' },
+                description: { ru: 'Две мощные говяжьи котлеты, бекон, сыр и соус барбекю на бриошь-булочке.', kk: 'Бриошь тоқашындағы екі үлкен сиыр котлеті, бекон, ірімшік және барбекю тұздығы.' },
+                price: 5500,
+                image: 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 8,
+                category: { ru: 'Бургеры и Сэндвичи', kk: 'Бургерлер мен Сэндвичтер' },
+                name: { ru: 'Бургер с курицей гриль', kk: 'Гриль тауық бургері' },
+                description: { ru: 'Сочное куриное филе на гриле, свежий салат айсберг, томаты и соус тар-тар.', kk: 'Грильдегі шырынды тауық филесі, айсберг салаты, қызанақ және тар-тар тұздығы.' },
+                price: 4000,
+                image: 'https://images.unsplash.com/photo-1615297928064-24977384d0da?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 9,
+                category: { ru: 'Бургеры и Сэндвичи', kk: 'Бургерлер мен Сэндвичтер' },
+                name: { ru: 'Клубный Сэндвич', kk: 'Клуб сэндвичі' },
+                description: { ru: 'Трехслойный сэндвич с индейкой, беконом, яйцом и хрустящим картофелем фри.', kk: 'Күркетауық, бекон, жумыртқа және қытырлақ фри картобы бар үш қабатты сэндвич.' },
+                price: 3600,
+                image: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // ПИЦЦА
+            {
+                id: 10,
+                category: { ru: 'Пицца', kk: 'Пицца' },
+                name: { ru: 'Пицца Маргарита', kk: 'Маргарита пиццасы' },
+                description: { ru: 'Классическая итальянская пицца на тонком тесте с томатным соусом, моцареллой и базиликом.', kk: 'Қызанақ тұздығы, моцарелла және насыбайгүл қосылған жұқа қамырдағы классикалық пицца.' },
+                price: 3500,
+                image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 11,
+                category: { ru: 'Пицца', kk: 'Пицца' },
+                name: { ru: 'Пицца Пепперони', kk: 'Пепперони пиццасы' },
+                description: { ru: 'Пикантная пицца с большим количеством острых колбасок пепперони и тянущимся сыром.', kk: 'Пепперони шұжықтары мен созылмалы ірімшік қосылған пикантты пицца.' },
+                price: 4200,
+                image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 12,
+                category: { ru: 'Пицца', kk: 'Пицца' },
+                name: { ru: 'Пицца Четыре сыра', kk: 'Төрт ірімшік пиццасы' },
+                description: { ru: 'Изысканное сочетание моцареллы, горгонзолы, пармезана и чеддера.', kk: 'Моцарелла, горгонзола, пармезан және чеддер ірімшіктерінің таңдаулы комбинациясы.' },
+                price: 4600,
+                image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // ПАСТА
+            {
+                id: 13,
+                category: { ru: 'Паста', kk: 'Паста' },
+                name: { ru: 'Спагетти Карбонара', kk: 'Карбонара спагеттиі' },
+                description: { ru: 'Классическая итальянская паста с гуанчиале, яичным желтком и сыром пекорино.', kk: 'Гуанчиале, жұмыртқа сарысы және пекорино ірімшігі бар классикалық итальяндық паста.' },
+                price: 4200,
+                image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 14,
+                category: { ru: 'Паста', kk: 'Паста' },
+                name: { ru: 'Феттуччине с курицей и грибами', kk: 'Тауық пен саңырауқұлақ қосылған феттуччине' },
+                description: { ru: 'Нежная паста в сливочно-чесночном соусе с кусочками куриного филе и шампиньонами.', kk: 'Тауық филесі және шампиньондары бар кілегейлі-сарымсақ тұздығындағы нәзік паста.' },
+                price: 4400,
+                image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 15,
+                category: { ru: 'Паста', kk: 'Паста' },
+                name: { ru: 'Паста с морепродуктами', kk: 'Теңіз өнімдері бар паста' },
+                description: { ru: 'Спагетти с тигровыми креветками, кальмарами и мидиями в соусе из томатов.', kk: 'Қызанақ тұздығындағы жолбарыс асшаяндары, кальмарлар және мидиялары бар спагетти.' },
+                price: 5800,
+                image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // САЛАТЫ
+            {
+                id: 16,
+                category: { ru: 'Салаты', kk: 'Салаттар' },
+                name: { ru: 'Цезарь с курицей', kk: 'Тауық етімен Цезарь' },
+                description: { ru: 'Классический салат с обжаренным куриным филе, пармезаном и хрустящими гренками.', kk: 'Қуырылған тауық филесі, пармезан және қытырлақ гренкалар қосылған классикалық салат.' },
+                price: 4500,
                 image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 6,
-                category: 'Салаты',
-                name: 'Теплый салат с ростбифом',
-                description: 'Микс салата, слайсы нежного ростбифа, вяленые томаты, кедровые орешки, медово-горчичная заправка.',
-                price: 4900,
-                image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=600&q=80'
-            },
-            {
                 id: 17,
-                category: 'Салаты',
-                name: 'Греческий салат',
-                description: 'Свежие овощи, сыр фета, маслины Каламата, красный лук и оливковое масло первого отжима.',
-                price: 3100,
+                category: { ru: 'Салаты', kk: 'Салаттар' },
+                name: { ru: 'Греческий салат', kk: 'Грек салаты' },
+                description: { ru: 'Свежие томаты, огурцы, сыр фета, красный лук и маслины с оливковым маслом.', kk: 'Жаңа піскен қызанақтар, қияр, фета ірімшігі, қызыл пияз және зәйтүн майы.' },
+                price: 3800,
                 image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=600&q=80'
             },
             {
                 id: 18,
-                category: 'Салаты',
-                name: 'Руккола со страчателлой',
-                description: 'Свежая руккола, нежный итальянский сыр страчателла, томаты черри и бальзамический крем.',
-                price: 4500,
-                image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 7,
-                category: 'Горячие закуски',
-                name: 'Сет брускетт "Сарыарка"',
-                description: 'Хрустящая чиабатта с тремя вкусами: лосось слабой соли, нежный ростбиф, страчателла с вялеными томатами.',
-                price: 3500,
-                image: 'https://images.unsplash.com/photo-1572695157366-5e585ab2b69f?auto=format&fit=crop&w=600&q=80'
+                category: { ru: 'Салаты', kk: 'Салаттар' },
+                name: { ru: 'Буррата с томатами', kk: 'Қызанақпен Буррата' },
+                description: { ru: 'Нежный итальянский сыр буррата со сладкими узбекскими томатами и базиликом.', kk: 'Тәтті өзбек қызанақтары мен насыбайгүл қосылған нәзік итальяндық буррата ірімшігі.' },
+                price: 5200,
+                image: 'https://images.unsplash.com/photo-1608897013039-887f21d8c804?auto=format&fit=crop&w=600&q=80'
             },
             {
                 id: 19,
-                category: 'Горячие закуски',
-                name: 'Тигровые креветки темпура',
-                description: 'Хрустящие креветки в воздушном кляре темпура с кисло-сладким соусом чили.',
-                price: 4800,
-                image: 'https://images.unsplash.com/photo-1625943555419-56a2cb596640?auto=format&fit=crop&w=600&q=80'
+                category: { ru: 'Салаты', kk: 'Салаттар' },
+                name: { ru: 'Теплый салат с говядиной', kk: 'Сиыр еті бар жылы салат' },
+                description: { ru: 'Сочные ломтики говядины на гриле с миксом салатов, черри и азиатским соусом.', kk: 'Салат миксі, черри және азиялық тұздығы бар грильдегі сиыр етінің шырынды тілімдері.' },
+                price: 4900,
+                image: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80'
             },
+
+            // СУПЫ
             {
                 id: 20,
-                category: 'Горячие закуски',
-                name: 'Мидии в сливочном соусе',
-                description: 'Мидии в раковинах, тушеные в белом вине, сливках и чесноке. Подаются с хрустящим багетом.',
-                price: 5500,
-                image: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?auto=format&fit=crop&w=600&q=80'
+                category: { ru: 'Супы', kk: 'Сорпалар' },
+                name: { ru: 'Суп Том Ям', kk: 'Том Ям сорпасы' },
+                description: { ru: 'Остро-кислый тайский суп с креветками, грибами шиитаке и кокосовым молоком.', kk: 'Асшаяндары, шиитаке саңырауқұлақтары және кокос сүті бар ащы-қышқыл тай сорпасы.' },
+                price: 4800,
+                image: 'https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 8,
-                category: 'Десерты',
-                name: 'Шоколадный фондан',
-                description: 'Горячий десерт из бельгийского темного шоколада с жидким центром. Подается с шариком ванильного мороженого и ягодами.',
+                id: 21,
+                category: { ru: 'Супы', kk: 'Сорпалар' },
+                name: { ru: 'Крем-суп из шампиньонов', kk: 'Шампиньон крем-сорпасы' },
+                description: { ru: 'Бархатистый суп-пюре из лесных шампиньонов со сливками и сухариками.', kk: 'Кілегей мен сухариктері бар орман шампиньондарынан жасалған нәзік крем-сорпа.' },
+                price: 3200,
+                image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // ГОРЯЧИЕ ЗАКУСКИ
+            {
+                id: 22,
+                category: { ru: 'Горячие закуски', kk: 'Ыстық тіскебасарлар' },
+                name: { ru: 'Тигровые креветки', kk: 'Жолбарыс асшаяндары' },
+                description: { ru: 'Обжаренные креветки в легкой панировке с кисло-сладким соусом.', kk: 'Қышқыл-тәтті тұздықпен берілетін жеңіл аунатылған қуырылған асшаяндар.' },
+                price: 4800,
+                image: 'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 23,
+                category: { ru: 'Горячие закуски', kk: 'Ыстық тіскебасарлар' },
+                name: { ru: 'Куриные крылышки BBQ', kk: 'BBQ тауық қанатшалары' },
+                description: { ru: 'Хрустящие запеченные крылышки в пикантном соусе со стейками сельдерея.', kk: 'Сельдерей таяқшалары бар пикантты тұздықтағы қытырлақ пісірілген қанатшалар.' },
+                price: 3600,
+                image: 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 24,
+                category: { ru: 'Горячие закуски', kk: 'Ыстық тіскебасарлар' },
+                name: { ru: 'Сырные палочки', kk: 'Ірімшік таяқшалары' },
+                description: { ru: 'Обжаренные до золотистой корочки палочки из моцареллы с клюквенным соусом.', kk: 'Бөріқарақат тұздығы бар алтын түстес моцарелла таяқшалары.' },
+                price: 2800,
+                image: 'https://images.unsplash.com/photo-1531749668029-2db88e4276c7?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 25,
+                category: { ru: 'Горячие закуски', kk: 'Ыстық тіскебасарлар' },
+                name: { ru: 'Картофель фри', kk: 'Фри картобы' },
+                description: { ru: 'Золотистый хрустящий картофель фри.', kk: 'Алтын түстес қытырлақ фри картобы.' },
+                price: 1500,
+                image: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?auto=format&fit=crop&w=600&q=80'
+            },
+
+            // ДЕСЕРТЫ
+            {
+                id: 26,
+                category: { ru: 'Десерты', kk: 'Десерттер' },
+                name: { ru: 'Чизкейк Нью-Йорк', kk: 'Нью-Йорк чизкейкі' },
+                description: { ru: 'Классический плотный чизкейк из сливочного сыра на песочной основе.', kk: 'Құмды негіздегі кілегейлі ірімшіктен жасалған классикалық тығыз чизкейк.' },
+                price: 2800,
+                image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 27,
+                category: { ru: 'Десерты', kk: 'Десерттер' },
+                name: { ru: 'Шоколадный фондан', kk: 'Шоколадты фондан' },
+                description: { ru: 'Горячий десерт с жидким шоколадным центром.', kk: 'Сұйық шоколад орталығы бар ыстық десерт.' },
                 price: 3200,
                 image: 'https://images.unsplash.com/photo-1624353365286-3f8d62daad51?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 9,
-                category: 'Десерты',
-                name: 'Чизкейк "Сан-Себастьян"',
-                description: 'Нежный обожженный чизкейк с карамельной корочкой и текучим центром.',
-                price: 3500,
-                image: 'https://images.unsplash.com/photo-1533134242443-d4fd215305ad?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 21,
-                category: 'Десерты',
-                name: 'Классический Тирамису',
-                description: 'Итальянский десерт на основе сыра маскарпоне, печенья савоярди и эспрессо.',
-                price: 2800,
+                id: 28,
+                category: { ru: 'Десерты', kk: 'Десерттер' },
+                name: { ru: 'Тирамису', kk: 'Тирамису' },
+                description: { ru: 'Воздушный итальянский десерт с маскарпоне и кофейной пропиткой.', kk: 'Маскарпоне және кофе сіңірмесі бар жеңіл итальяндық десерт.' },
+                price: 3000,
                 image: 'https://images.unsplash.com/photo-1571115177098-24ec42ed204d?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 10,
-                category: 'Напитки',
-                name: 'Коктейль "Огни Караганды"',
-                description: 'Освежающий авторский микс: джин, пюре маракуйи, сироп лемонграсса, сок лимона и игристое вино.',
-                price: 2800,
-                image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&w=600&q=80'
+                id: 29,
+                category: { ru: 'Десерты', kk: 'Десерттер' },
+                name: { ru: 'Бельгийские вафли с ягодами', kk: 'Жидектер қосылған бельгиялық вафли' },
+                description: { ru: 'Теплые пышные вафли со свежими ягодами, шариком ванильного мороженого и кленовым сиропом.', kk: 'Жаңа піскен жидектер, ванильді балмұздақ шаршысы және үйеңкі сиропы бар ыстық вафли.' },
+                price: 2900,
+                image: 'https://images.unsplash.com/photo-1562376552-0d160a2f238d?auto=format&fit=crop&w=600&q=80'
             },
+
+            // НАПИТКИ
             {
-                id: 11,
-                category: 'Напитки',
-                name: 'Авторский чай "Ягодный бунт"',
-                description: 'Чай на основе свежих лесных ягод, с добавлением мяты, меда и специй. Чайник 800мл.',
-                price: 2500,
-                image: 'https://images.unsplash.com/photo-1576092762791-dd9e2220abd4?auto=format&fit=crop&w=600&q=80'
-            },
-            {
-                id: 12,
-                category: 'Напитки',
-                name: 'Лимонад Манго-Маракуйя',
-                description: 'Освежающий тропический лимонад со свежим пюре манго, маракуйей и содовой. 400мл.',
+                id: 30,
+                category: { ru: 'Напитки', kk: 'Сусындар' },
+                name: { ru: 'Лимонад Манго-Маракуйя', kk: 'Манго-Маракуйя лимонады' },
+                description: { ru: 'Тропический освежающий лимонад со льдом и мятой.', kk: 'Мұз және жалбыз қосылған тропикалық сергітетін лимонад.' },
                 price: 1800,
                 image: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80'
             },
             {
-                id: 22,
-                category: 'Напитки',
-                name: 'Капучино',
-                description: 'Классический кофейный напиток на основе эспрессо с густой молочной пенкой.',
+                id: 31,
+                category: { ru: 'Напитки', kk: 'Сусындар' },
+                name: { ru: 'Клубничный лимонад', kk: 'Құлпынай лимонады' },
+                description: { ru: 'Холодный напиток на основе ягод клубники, цитрусов и содовой.', kk: 'Құлпынай, цитрус және сода негізіндегі салқын сусын.' },
+                price: 1800,
+                image: 'https://images.unsplash.com/photo-1497534446932-c925b458314e?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 32,
+                category: { ru: 'Напитки', kk: 'Сусындар' },
+                name: { ru: 'Мохито Классический', kk: 'Классикалық Мохито' },
+                description: { ru: 'Освежающий безалкогольный коктейль со свежей мятой, лаймом и содовой.', kk: 'Жаңа піскен жалбыз, лайм және содасы бар сергітетін алкогольсіз коктейль.' },
+                price: 1900,
+                image: 'https://images.unsplash.com/photo-1551024709-8f23befc6f87?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 33,
+                category: { ru: 'Напитки', kk: 'Сусындар' },
+                name: { ru: 'Ягодный смузи', kk: 'Жидекті смузи' },
+                description: { ru: 'Густой гурманский смузи из смеси диких ягод, банана и натурального йогурта.', kk: 'Жабайы жидектер, банан және табиғи йогурт қоспасынан жасалған қою смузи.' },
+                price: 2100,
+                image: 'https://images.unsplash.com/photo-1553530666-ba11a7da3888?auto=format&fit=crop&w=600&q=80'
+            },
+            {
+                id: 34,
+                category: { ru: 'Напитки', kk: 'Сусындар' },
+                name: { ru: 'Капучино', kk: 'Капучино' },
+                description: { ru: 'Классический кофейный напиток с густой молочной пенкой.', kk: 'Қою сүт көбігі бар классикалық кофе сусыны.' },
                 price: 1200,
-                image: 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5?auto=format&fit=crop&w=600&q=80'
+                image: 'https://images.unsplash.com/photo-1534778101976-62847782c213?auto=format&fit=crop&w=600&q=80'
             }
         ];
 
@@ -355,7 +514,8 @@
 
         window.onload = () => {
             renderMenu();
-            updateCartUI(); // Инициализируем пустое состояние корзины при загрузке
+            updateCartUI(); 
+            updateStaticText();
             
             if (window.innerWidth < 768) {
                 const cartContent = document.getElementById('cart-content');
@@ -376,24 +536,54 @@
             }
         };
 
+        function changeLang(lang) {
+            currentLang = lang;
+            
+            // Обновляем стили кнопок
+            const btnRu = document.getElementById('lang-ru');
+            const btnKk = document.getElementById('lang-kk');
+            
+            if (lang === 'ru') {
+                btnRu.className = "px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold bg-gold-500 text-white transition-colors";
+                btnKk.className = "px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors";
+            } else {
+                btnKk.className = "px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold bg-gold-500 text-white transition-colors";
+                btnRu.className = "px-2 md:px-3 py-1.5 text-xs md:text-sm font-bold text-gray-400 hover:text-white hover:bg-white/5 transition-colors";
+            }
+            
+            updateStaticText();
+            renderMenu();
+            updateCartUI();
+        }
+
+        function updateStaticText() {
+            document.getElementById('city-label').innerText = i18n[currentLang].city;
+            document.getElementById('cart-title').innerText = i18n[currentLang].cartTitle;
+            document.getElementById('cart-subtotal-label').innerText = i18n[currentLang].subtotal;
+            document.getElementById('cart-service-label').innerText = i18n[currentLang].serviceFee;
+            document.getElementById('cart-total-label').innerText = i18n[currentLang].total;
+            document.getElementById('order-notice').innerHTML = i18n[currentLang].orderNotice;
+        }
+
         function renderMenu() {
             const container = document.getElementById('menu-container');
             const navContainer = document.getElementById('category-nav');
             container.innerHTML = '';
             navContainer.innerHTML = '';
             
-            const categories = [...new Set(menuItems.map(item => item.category))];
+            // Собираем уникальные категории на текущем языке
+            const categories = [...new Set(menuItems.map(item => item.category[currentLang]))];
             
-            categories.forEach(category => {
-                const categoryId = `category-${category.replace(/\s+/g, '-')}`;
+            categories.forEach(categoryName => {
+                const categoryId = `category-${categoryName.replace(/\s+/g, '-')}`;
                 
                 const navBtn = document.createElement('a');
                 navBtn.href = `#${categoryId}`;
                 navBtn.className = "snap-start whitespace-nowrap px-4 py-2 rounded-full bg-card border border-white/5 text-gray-300 text-sm font-medium hover:bg-gold-500 hover:text-white hover:border-gold-500 transition-all active:scale-95";
-                navBtn.innerText = category;
+                navBtn.innerText = categoryName;
                 navContainer.appendChild(navBtn);
 
-                const categoryItems = menuItems.filter(item => item.category === category);
+                const categoryItems = menuItems.filter(item => item.category[currentLang] === categoryName);
                 
                 const section = document.createElement('div');
                 section.id = categoryId;
@@ -401,7 +591,7 @@
                 
                 let html = `
                     <div class="mb-6 flex items-center gap-4">
-                        <h2 class="font-serif text-2xl md:text-3xl font-bold text-white tracking-wide">${category}</h2>
+                        <h2 class="font-serif text-2xl md:text-3xl font-bold text-white tracking-wide">${categoryName}</h2>
                         <div class="flex-1 h-[1px] bg-gradient-to-r from-gold-500/50 to-transparent"></div>
                     </div>
                     <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
@@ -411,19 +601,19 @@
                     html += `
                         <div class="bg-card rounded-2xl overflow-hidden shadow-lg border border-white/5 flex flex-col group transition-transform hover:-translate-y-1">
                             <div class="relative h-36 md:h-56 overflow-hidden bg-darker">
-                                <img src="${item.image}" alt="${item.name}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e1e1e/d97706?text=Saryarka+Lounge';" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy">
+                                <img src="${item.image}" alt="${item.name[currentLang]}" onerror="this.onerror=null; this.src='https://placehold.co/600x400/1e1e1e/d97706?text=Saryarka+Lounge';" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" loading="lazy">
                                 <div class="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent opacity-90"></div>
                                 <div class="absolute bottom-2 left-2 right-2 md:bottom-4 md:left-4 md:right-4 flex justify-between items-end">
                                     <span class="bg-dark/80 backdrop-blur text-gold-400 font-bold text-xs md:text-base px-2 py-1 md:px-3 md:py-1.5 rounded-lg border border-gold-500/30">${formatPrice(item.price)}</span>
                                 </div>
                             </div>
                             <div class="p-3 md:p-5 flex-1 flex flex-col">
-                                <h3 class="font-serif text-sm md:text-lg font-bold text-white leading-tight mb-1 md:mb-2">${item.name}</h3>
-                                <p class="text-gray-400 text-[11px] md:text-sm mb-3 md:mb-5 flex-1 leading-relaxed line-clamp-3 md:line-clamp-none">${item.description}</p>
+                                <h3 class="font-serif text-sm md:text-lg font-bold text-white leading-tight mb-1 md:mb-2">${item.name[currentLang]}</h3>
+                                <p class="text-gray-400 text-[11px] md:text-sm mb-3 md:mb-5 flex-1 leading-relaxed line-clamp-3 md:line-clamp-none">${item.description[currentLang]}</p>
                                 
                                 <button onclick="addToCart(${item.id})" class="w-full bg-white/5 hover:bg-gold-500 hover:text-white text-gray-300 border border-white/10 hover:border-gold-500 py-2 md:py-3 rounded-xl text-xs md:text-sm font-medium transition-all flex items-center justify-center gap-1.5 md:gap-2 active:scale-95 group-hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]">
                                     <i class="ph ph-plus-circle text-lg md:text-xl"></i>
-                                    <span>В заказ</span>
+                                    <span>${i18n[currentLang].addToCart}</span>
                                 </button>
                             </div>
                         </div>
@@ -462,11 +652,13 @@
 
         function updateCartUI() {
             const cartItemsContainer = document.getElementById('cart-items');
+            const cartSubtotal = document.getElementById('cart-subtotal');
+            const cartService = document.getElementById('cart-service');
             const cartTotal = document.getElementById('cart-total');
             const badge = document.getElementById('cart-badge');
             
             cartItemsContainer.innerHTML = '';
-            let totalSum = 0;
+            let subtotalSum = 0;
             let totalItems = 0;
             
             const cartValues = Object.values(cart);
@@ -477,8 +669,8 @@
                         <div class="bg-white/5 p-6 rounded-full mb-4">
                             <i class="ph ph-basket text-5xl opacity-50"></i>
                         </div>
-                        <p class="text-lg font-medium text-gray-400">Ваш заказ пока пуст</p>
-                        <p class="text-sm mt-2 text-gray-500 max-w-[200px] mx-auto">Добавьте изысканные блюда из нашего меню</p>
+                        <p class="text-lg font-medium text-gray-400">${i18n[currentLang].emptyCart}</p>
+                        <p class="text-sm mt-2 text-gray-500 max-w-[200px] mx-auto">${i18n[currentLang].emptyDesc}</p>
                     </div>
                 `;
                 badge.classList.add('hidden');
@@ -486,7 +678,7 @@
                 badge.classList.remove('hidden');
                 
                 cartValues.forEach(item => {
-                    totalSum += item.price * item.quantity;
+                    subtotalSum += item.price * item.quantity;
                     totalItems += item.quantity;
                     
                     const itemEl = document.createElement('div');
@@ -494,9 +686,9 @@
                     
                     itemEl.innerHTML = `
                         <div class="absolute left-0 top-0 bottom-0 w-1 bg-gold-500/50"></div>
-                        <img src="${item.image}" alt="${item.name}" onerror="this.onerror=null; this.src='https://placehold.co/100x100/1e1e1e/d97706?text=Фото';" class="w-16 h-16 rounded-lg object-cover shadow-md ml-1">
+                        <img src="${item.image}" alt="${item.name[currentLang]}" onerror="this.onerror=null; this.src='https://placehold.co/100x100/1e1e1e/d97706?text=${i18n[currentLang].photoFallback}';" class="w-16 h-16 rounded-lg object-cover shadow-md ml-1">
                         <div class="flex-1 min-w-0 pr-2">
-                            <h4 class="text-sm font-semibold text-white truncate mb-1">${item.name}</h4>
+                            <h4 class="text-sm font-semibold text-white truncate mb-1">${item.name[currentLang]}</h4>
                             <p class="text-gold-400 text-sm font-medium">${formatPrice(item.price * item.quantity)}</p>
                         </div>
                         <div class="flex items-center gap-2 bg-darker rounded-lg p-1 border border-white/10 shadow-inner">
@@ -513,8 +705,13 @@
                 });
             }
             
+            const serviceFee = Math.round(subtotalSum * 0.10);
+            const grandTotal = subtotalSum + serviceFee;
+
             badge.innerText = totalItems;
-            cartTotal.innerText = formatPrice(totalSum);
+            if (cartSubtotal) cartSubtotal.innerText = formatPrice(subtotalSum);
+            if (cartService) cartService.innerText = formatPrice(serviceFee);
+            if (cartTotal) cartTotal.innerText = formatPrice(grandTotal);
         }
 
         function toggleCart() {
